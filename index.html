@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Ganesh Lighting — WhatsApp Order Demo</title>
+  <style>
+    :root{--brand:#f59e0b;--muted:#666}
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;margin:0;background:#fafafa;color:#111}
+    header{background:#fff;padding:1rem 1.25rem;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+    .brand{display:flex;gap:.75rem;align-items:center}
+    .logo{width:40px;height:40px;border-radius:6px;background:linear-gradient(135deg,#f97316,#f59e0b);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700}
+    main{max-width:1100px;margin:1.25rem auto;padding:0 1rem}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem}
+    .card{background:#fff;border-radius:8px;padding:1rem;box-shadow:0 6px 18px rgba(12,12,12,.04);display:flex;flex-direction:column}
+    .card img{width:100%;height:140px;object-fit:cover;border-radius:6px}
+    .card h3{margin:.5rem 0 .25rem;font-size:1.05rem}
+    .price{color:var(--brand);font-weight:700}
+    .desc{color:var(--muted);font-size:.9rem;margin-bottom:.6rem}
+    .actions{margin-top:auto;display:flex;gap:.5rem}
+    button{background:var(--brand);color:#fff;border:0;padding:.5rem .7rem;border-radius:6px;cursor:pointer}
+    .secondary{background:#fff;border:1px solid #eee;color:#111}
+
+    /* Cart */
+    .cart-btn{position:fixed;right:18px;bottom:18px;background:#10b981;color:#fff;border-radius:999px;padding:.6rem .9rem;box-shadow:0 8px 20px rgba(16,185,129,.15);display:flex;gap:.6rem;align-items:center}
+    .cart-panel{position:fixed;right:18px;bottom:72px;width:320px;max-height:70vh;background:#fff;border-radius:12px;box-shadow:0 12px 40px rgba(2,6,23,.12);overflow:auto;padding:12px;display:none;flex-direction:column}
+    .cart-item{display:flex;gap:.6rem;align-items:center;padding:.45rem 0;border-bottom:1px dashed #eee}
+    .cart-item img{width:54px;height:54px;object-fit:cover;border-radius:6px}
+    .qty{display:flex;align-items:center;gap:.4rem}
+    .qty button{padding:.2rem .45rem}
+    .tot{font-weight:700;margin-top:.6rem}
+    .checkout{margin-top:.6rem;padding:.5rem;border-radius:8px}
+
+    /* Checkout modal */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center}
+    .modal{background:#fff;padding:1rem;border-radius:10px;max-width:520px;width:94%}
+    .input{width:100%;padding:.5rem;border-radius:6px;border:1px solid #e6e6e6;margin-top:.5rem}
+    footer{padding:1rem;text-align:center;color:#666;font-size:.9rem}
+
+    @media (max-width:640px){.cart-panel{right:10px;left:10px;width:auto}}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo">GL</div>
+      <div>
+        <div style="font-weight:700">Ganesh Lighting</div>
+        <div style="font-size:.85rem;color:var(--muted)">WhatsApp order demo</div>
+      </div>
+    </div>
+    <div style="color:var(--muted);font-size:.95rem">Simple — Add to cart → Checkout → WhatsApp</div>
+  </header>
+
+  <main>
+    <h2 style="margin:0 0 .5rem">Products</h2>
+    <div class="grid" id="products"></div>
+  </main>
+
+  <button class="cart-btn" id="openCart">🛒 <span id="cartCount">0</span></button>
+
+  <aside class="cart-panel" id="cartPanel">
+    <h3 style="margin:0 0 .6rem">Your Cart</h3>
+    <div id="cartItems"></div>
+    <div class="tot" id="cartTotal">Total: ₹0</div>
+    <button class="checkout" id="openCheckout" style="background:var(--brand);color:#fff;border:0">Checkout via WhatsApp</button>
+    <div style="height:8px"></div>
+    <button class="secondary" id="clearCart">Clear Cart</button>
+  </aside>
+
+  <div class="modal-backdrop" id="backdrop">
+    <div class="modal">
+      <h3 style="margin:0">Enter your details</h3>
+      <label style="display:block;margin-top:.6rem">Name</label>
+      <input class="input" id="custName" placeholder="Your name" />
+      <label style="display:block;margin-top:.6rem">Phone</label>
+      <input class="input" id="custPhone" placeholder="eg. 9876543210" />
+      <label style="display:block;margin-top:.6rem">Address</label>
+      <textarea class="input" id="custAddress" rows="3" placeholder="Delivery address"></textarea>
+
+      <div style="display:flex;gap:.6rem;margin-top:.8rem;justify-content:flex-end">
+        <button id="cancelCheckout" class="secondary">Cancel</button>
+        <button id="sendWhatsApp" style="background:#25D366;color:white;border:0;padding:.5rem .7rem;border-radius:6px">Open WhatsApp →</button>
+      </div>
+      <p style="margin:.6rem 0 0;color:var(--muted);font-size:.9rem">Tip: Edit the phone number in the code to your business WhatsApp number before deploying.</p>
+    </div>
+  </div>
+
+  <footer>
+    Demo built with plain HTML, CSS &amp; JavaScript • Works on mobile & desktop
+  </footer>
+
+  <script>
+    // ====== Configuration ======
+    // Change this to your business number (international format, no + or 00), e.g. 919876543210
+    const BUSINESS_WHATSAPP_NUMBER = '919999999999';
+
+    // Sample products — you can add/remove or change prices here
+    const PRODUCTS = [
+      {id:1,name:'Ganesh LED Bulb (9W)', price:150, img:'https://images.unsplash.com/photo-1526178616024-6a3b6e3b1f4d?q=80&w=800&auto=format&fit=crop&ixlib=rb-4.0.3&s=6c9f2b7f4b1f2c0c'},
+      {id:2,name:'Ganesh Decorative Table Lamp', price:1200, img:'https://images.unsplash.com/photo-1503602642458-232111445657?q=80&w=800&auto=format&fit=crop&ixlib=rb-4.0.3&s=18a0af0e2b7f68d3'},
+      {id:3,name:'Ganesh Crystal Chandelier', price:5500, img:'https://images.unsplash.com/photo-1543233608-73f8de7b7161?q=80&w=800&auto=format&fit=crop&ixlib=rb-4.0.3&s=9c0b6f6fb7e4b4f2'},
+      {id:4,name:'Ganesh Festive LED String Lights', price:499, img:'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?q=80&w=800&auto=format&fit=crop&ixlib=rb-4.0.3&s=3d9dd5ea99f8f2c1'}
+    ];
+
+    // ====== Helpers ======
+    const $ = id => document.getElementById(id);
+    function formatINR(n){return '₹'+n.toLocaleString('en-IN')}
+
+    // ====== Cart (localStorage) ======
+    const CART_KEY = 'ganesh_cart_v1';
+    function loadCart(){return JSON.parse(localStorage.getItem(CART_KEY) || '{}')}
+    function saveCart(cart){localStorage.setItem(CART_KEY, JSON.stringify(cart))}
+
+    // ====== Render Products ======
+    const productsEl = $('products');
+    PRODUCTS.forEach(p => {
+      const card = document.createElement('div'); card.className='card';
+      card.innerHTML = `
+        <img src="${p.img}" alt="${p.name}" />
+        <h3>${p.name}</h3>
+        <div class="price">${formatINR(p.price)}</div>
+        <div class="desc">High quality lighting product from Ganesh Lighting.</div>
+        <div class="actions">
+          <button data-id="${p.id}" class="addBtn">Add to cart</button>
+          <button class="secondary" onclick="alert('View details later — demo')">Quick view</button>
+        </div>
+      `;
+      productsEl.appendChild(card);
+    });
+
+    // ====== Cart UI ======
+    const openCartBtn = $('openCart');
+    const cartPanel = $('cartPanel');
+    const cartItemsEl = $('cartItems');
+    const cartCount = $('cartCount');
+    const cartTotalEl = $('cartTotal');
+
+    function updateCartUI(){
+      const cart = loadCart();
+      const ids = Object.keys(cart);
+      cartItemsEl.innerHTML='';
+      if(ids.length===0){cartItemsEl.innerHTML = '<div style="color:#666;padding:.6rem 0">Cart is empty</div>'}
+      let total = 0; let qtyTotal = 0;
+      ids.forEach(id => {
+        const qty = cart[id];
+        const prod = PRODUCTS.find(p=>p.id==id);
+        const lineTotal = prod.price * qty;
+        total += lineTotal; qtyTotal += qty;
+        const item = document.createElement('div'); item.className='cart-item';
+        item.innerHTML = `
+          <img src="${prod.img}" />
+          <div style="flex:1">
+            <div style="font-weight:600">${prod.name}</div>
+            <div style="font-size:.9rem;color:var(--muted)">${formatINR(prod.price)} x ${qty} = ${formatINR(lineTotal)}</div>
+          </div>
+          <div class="qty">
+            <button onclick="changeQty(${prod.id}, -1)">-</button>
+            <div>${qty}</div>
+            <button onclick="changeQty(${prod.id}, 1)">+</button>
+          </div>
+        `;
+        cartItemsEl.appendChild(item);
+      });
+      cartCount.textContent = qtyTotal;
+      cartTotalEl.textContent = 'Total: ' + formatINR(total);
+    }
+
+    function addToCart(id, amount=1){
+      const cart = loadCart();
+      cart[id] = (cart[id]||0) + amount;
+      if(cart[id] < 1) delete cart[id];
+      saveCart(cart); updateCartUI();
+      cartPanel.style.display = 'flex';
+    }
+
+    function changeQty(id, delta){
+      const cart = loadCart();
+      cart[id] = (cart[id]||0) + delta;
+      if(cart[id] <= 0) delete cart[id];
+      saveCart(cart); updateCartUI();
+    }
+
+    document.addEventListener('click', (e)=>{
+      if(e.target.matches('.addBtn')){
+        const id = e.target.getAttribute('data-id'); addToCart(parseInt(id,10));
+      }
+    });
+
+    // open/close cart
+    openCartBtn.addEventListener('click', ()=>{
+      cartPanel.style.display = cartPanel.style.display === 'flex' ? 'none' : 'flex';
+    });
+
+    $('clearCart').addEventListener('click', ()=>{ if(confirm('Clear cart?')){ localStorage.removeItem(CART_KEY); updateCartUI(); }});
+
+    // Checkout modal
+    const backdrop = $('backdrop');
+    const openCheckout = $('openCheckout');
+    const cancelCheckout = $('cancelCheckout');
+    const sendWhatsApp = $('sendWhatsApp');
+
+    openCheckout.addEventListener('click', ()=>{
+      const cart = loadCart(); if(Object.keys(cart).length===0){ alert('Cart is empty'); return }
+      backdrop.style.display = 'flex';
+    });
+    cancelCheckout.addEventListener('click', ()=>{ backdrop.style.display='none' });
+
+    sendWhatsApp.addEventListener('click', ()=>{
+      const name = $('custName').value.trim();
+      const phone = $('custPhone').value.trim();
+      const address = $('custAddress').value.trim();
+      if(!name || !phone || !address){ alert('Please fill name, phone and address'); return }
+
+      const cart = loadCart();
+      const ids = Object.keys(cart);
+      let total = 0; let lines = [];
+      ids.forEach(id=>{
+        const p = PRODUCTS.find(x=>x.id==id);
+        const q = cart[id];
+        const lineTotal = p.price * q; total += lineTotal;
+        lines.push(`${q} x ${p.name} — ₹${p.price} each (₹${lineTotal})`);
+      });
+
+      let message = `Hi, I would like to place an order from Ganesh Lighting.%0A%0A`;
+      message += `Order details:%0A` + lines.join('%0A') + `%0A%0A`;
+      message += `Total: ₹${total}%0A%0A`;
+      message += `Name: ${name}%0APhone: ${phone}%0AAddress: ${address}`;
+
+      // Open WhatsApp
+      const waNum = 7250727447
+      const url = `https://web.whatsapp.com/send?phone=${waNum}&text=${message}`;
+
+      // Clear cart if you want — comment out if not desired
+      // localStorage.removeItem(CART_KEY);
+
+      window.open(url, '_blank');
+    });
+
+    // init
+    updateCartUI();
+  </script>
+</body>
+</html>
