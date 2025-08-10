@@ -229,7 +229,14 @@
 
       // Open WhatsApp
       const waNum = 7250727447
-      const url = `https://web.whatsapp.com/send?phone=${waNum}&text=${message}`;
+      let url
+      if (window.innerWidth > 768) {
+            // Desktop → WhatsApp Web
+            url = `https://web.whatsapp.com/send?phone=${waNum}&text=${message}`;
+        } else {
+            // Mobile → WhatsApp App
+            url = `https://wa.me/${waNum}?text=${message}`;
+        }
 
       // Clear cart if you want — comment out if not desired
       // localStorage.removeItem(CART_KEY);
